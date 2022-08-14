@@ -60,4 +60,3 @@ executables:
   mc:
     main: Main.hs
     source-dirs: app
-    ghc-options: [ -split-sections  ]
