@@ -245,9 +245,9 @@ cachePost dp conn = do
     Right (headers, body) -> do
   
     fragment <- case takeExtension dp of
-      ".html" -> pure body
-      _       -> (from . \(a,b,c) -> b) 
-              <$> readProcessWithExitCode "pandoc" ["-t", "html"] (from body)
+      "html" -> pure body
+      _      -> (from . \(a,b,c) -> b) 
+             <$> readProcessWithExitCode "pandoc" ["-t", "html"] (from body)
 
     let 
       webPath = dropExtension d
