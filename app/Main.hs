@@ -50,7 +50,9 @@ data CachedPost = CachedPost
   , pTitle      :: Text
   , pDesc       :: Maybe Text
   , pContent    :: Text
-  } deriving (Generic, Show)
+  } deriving (Generic)
+instance Show CachedPost where
+  show (CachedPost p w e u s t d c) = [i|(#{p},#{w},#{e},#{u},#{s},#{t},#{d},#{T.take 10 c}...)|]
 instance FromRow CachedPost
 instance ToRow CachedPost
 
@@ -268,6 +270,8 @@ cachePost d conn = do
 
     execute conn [i|DELETE FROM posts WHERE path = ? |] [d]
     slug <- makeSlug d (from <$> lookup "slug" headers) conn
+    print
+      $ CachedPost d webPath webExtPath dir slug title desc content
     execute conn [i| INSERT OR REPLACE INTO posts VALUES (?, ?, ?, ?, ?, ?, ?, ?)|] 
       $ CachedPost d webPath webExtPath dir slug title desc content
 
