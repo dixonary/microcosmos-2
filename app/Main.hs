@@ -88,6 +88,7 @@ main = do
     [i| CREATE TABLE posts 
       ( path             TEXT PRIMARY KEY
       , web_path         TEXT
+      , web_ext_path     TEXT
       , dir              TEXT
       , slug             TEXT UNIQUE
       , title            TEXT
@@ -261,7 +262,7 @@ cachePost d conn = do
     execute conn [i|DELETE FROM posts WHERE path = ? |] [d]
     slug <- makeSlug d (from <$> lookup "slug" headers) conn
     execute conn [i| INSERT INTO posts VALUES (?, ?, ?, ?, ?, ?, ?, ?)|] 
-      $ CachedPost d webPath dir slug webExtPath title desc content
+      $ CachedPost d webPath webExtPath dir slug title desc content
 
 cacheDir :: FilePath -> Connection -> IO ()
 cacheDir d conn = do
