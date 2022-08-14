@@ -20,9 +20,11 @@ executable mc
   hs-source-dirs:
       app
   default-extensions: DataKinds DuplicateRecordFields MultiParamTypeClasses ScopedTypeVariables TemplateHaskell TypeApplications TypeFamilies GeneralizedNewtypeDeriving LambdaCase BlockArguments TupleSections MultiWayIf OverloadedStrings QuasiQuotes RankNTypes ConstraintKinds QuantifiedConstraints FlexibleContexts RecordWildCards NondecreasingIndentation DeriveGeneric StandaloneDeriving
+  ghc-options: -split-sections
   build-depends:
       attoparsec
     , base >=4.10 && <5
+    , bytestring
     , directory
     , extra
     , file-embed
@@ -35,6 +37,7 @@ executable mc
     , string-interpolate
     , terminal-progress-bar
     , text
+    , text-icu
     , wai
     , wai-middleware-static
     , warp

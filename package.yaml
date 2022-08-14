@@ -13,6 +13,8 @@ category: web
 dependencies:
 - base >=4.10 && <5
 - text
+- bytestring
+- text-icu
 - witch
 - extra
 - sqlite-simple
@@ -58,4 +60,4 @@ executables:
   mc:
     main: Main.hs
     source-dirs: app
-    split-objs: true
+    ghc-options: [ -split-sections  ]

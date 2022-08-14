@@ -1,5 +1,6 @@
 module Main where
 
+import qualified Data.ByteString as BS
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -34,6 +35,8 @@ import Network.Wai.Middleware.Static
 import Witch (from)
 import System.Environment (getEnv)
 import System.Environment.Blank (getEnvDefault)
+import qualified Data.Text.ICU.Convert as ICU
+import Data.Char (isDigit)
 
 -------------------------------------------------------------------------------
 -- DATA TYPES AND CONSTANTS 
@@ -80,7 +83,8 @@ main :: IO ()
 main = do
   initialise
   conn <- open ":memory:"
-  port <- getEnvDefault "" "MC_PORT" <&> \case { "" -> 3000; s -> read s }
+  port <- getEnvDefault "" "MC_PORT" 
+    <&> \x -> if all isDigit x then read x else 3000
 
   hSetBuffering stdout NoBuffering
   
@@ -204,11 +208,12 @@ progressAll :: (a -> Text) -> (a -> IO ()) -> [a] -> IO ()
 progressAll s a xs = do
   bar <- newProgressBar 
     (defStyle { stylePrefix = Label \p _ -> progressCustom p }) 
-    50 (Progress 0 (length xs) "")
+    50 (Progress 0 (length xs + 1) "")
   forM_ xs \x -> do
     updateProgress bar (\b -> b { progressCustom = from $ s x })
     a x
     incProgress bar 1
+  incProgress bar 1
 
 fillTemplate :: FilePath -> [(Text,Text)] -> IO Text
 fillTemplate templateName params = do
@@ -233,7 +238,9 @@ cacheAllPosts conn = do
 
 cachePost :: FilePath -> Connection -> IO ()
 cachePost d conn = do
-  fileRaw <- T.readFile d
+  convert <- ICU.toUnicode <$> (ICU.open "utf-8" Nothing)
+  h       <- openFile d ReadMode
+  fileRaw <- convert <$> BS.hGetContents h 
 
   case parseOnly postP fileRaw of
     Left err -> error err
