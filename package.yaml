@@ -13,22 +13,22 @@ category: web
 dependencies:
 - base >=4.10 && <5
 - text
+- witch
+- extra
 - sqlite-simple
 - string-interpolate
 - directory
 - filepath
 - fsnotify
+- process
+- file-embed
 - wai
 - warp
-- file-embed
-- process
-- terminal-progress-bar
-- http-types
 - wai-middleware-static
-- witch
+- http-types
 - attoparsec
 - parser-combinators
-- extra
+- terminal-progress-bar
 
 default-extensions:
 - DataKinds

@@ -32,6 +32,7 @@ import Network.Wai.Handler.Warp
 import Network.HTTP.Types.Status
 import Network.Wai.Middleware.Static
 import Witch (from)
+import System.Environment (getEnv)
 
 -------------------------------------------------------------------------------
 -- DATA TYPES AND CONSTANTS 
@@ -77,6 +78,7 @@ main :: IO ()
 main = do
   initialise
   conn <- open ":memory:"
+  port <- getEnv "MC_PORT" <&> \case { "" -> 3000; s -> read s }
 
   hSetBuffering stdout NoBuffering
   
@@ -115,7 +117,7 @@ main = do
   forkIO $ watch conn
   forkIO $ watchTemplates conn
   
-  run 3000 
+  run port 
     $ serve conn
     & staticPolicyWithOptions defaultOptions 
       (hasPrefix staticDir <|> only [("favicon.ico", "static/favicon.ico")])
