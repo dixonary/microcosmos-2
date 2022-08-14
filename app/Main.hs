@@ -33,6 +33,7 @@ import Network.HTTP.Types.Status
 import Network.Wai.Middleware.Static
 import Witch (from)
 import System.Environment (getEnv)
+import System.Environment.Blank (getEnvDefault)
 
 -------------------------------------------------------------------------------
 -- DATA TYPES AND CONSTANTS 
@@ -78,7 +79,7 @@ main :: IO ()
 main = do
   initialise
   conn <- open ":memory:"
-  port <- getEnv "MC_PORT" <&> \case { "" -> 3000; s -> read s }
+  port <- getEnvDefault "" "MC_PORT" <&> \case { "" -> 3000; s -> read s }
 
   hSetBuffering stdout NoBuffering
   
