@@ -44,7 +44,6 @@ import Data.Char (isDigit)
 data CachedPost = CachedPost
   { pPath       :: FilePath
   , pWebPath    :: FilePath
-  , pWebExtPath :: FilePath
   , pDir        :: FilePath
   , pSlug       :: FilePath
   , pTitle      :: Text
@@ -52,13 +51,12 @@ data CachedPost = CachedPost
   , pContent    :: Text
   } deriving (Generic)
 instance Show CachedPost where
-  show (CachedPost p w e u s t d c) = [i|(#{p},#{w},#{e},#{u},#{s},#{t},#{d},#{T.take 10 c}...)|]
+  show (CachedPost p w u s t d c) = [i|(#{p},#{w},#{u},#{s},#{t},#{d},#{T.take 10 c}...)|]
 instance FromRow CachedPost
 instance ToRow CachedPost
 
 data CachedDir = CachedDir
   { dPath     :: FilePath
-  , dWebPath  :: FilePath
   , dDir      :: FilePath
   , dSlug     :: FilePath
   , dTitle    :: Text
@@ -94,7 +92,6 @@ main = do
     [i| CREATE TABLE posts 
       ( path             TEXT PRIMARY KEY
       , web_path         TEXT
-      , web_ext_path     TEXT
       , dir              TEXT
       , slug             TEXT UNIQUE
       , title            TEXT
@@ -106,7 +103,6 @@ main = do
   execute_ conn
     [i| CREATE TABLE dirs
       ( path             TEXT PRIMARY KEY
-      , web_path         TEXT
       , dir              TEXT
       , slug             TEXT UNIQUE
       , title            TEXT
@@ -117,9 +113,8 @@ main = do
   -- Create indices for faster lookup on valid paths
   execute_ conn [i|CREATE UNIQUE INDEX post_slug ON posts ( slug )|]
   execute_ conn [i|CREATE INDEX post_web_path ON posts ( web_path )|]
-  execute_ conn [i|CREATE UNIQUE INDEX post_web_ext_path ON posts ( web_ext_path )|]
   execute_ conn [i|CREATE UNIQUE INDEX dir_slug ON dirs ( slug )|]
-  execute_ conn [i|CREATE UNIQUE INDEX dir_web_path ON dirs ( web_path )|]
+  execute_ conn [i|CREATE UNIQUE INDEX dir_path ON dirs ( path )|]
 
   cacheAllPosts conn
   cacheAllDirs conn
@@ -167,7 +162,7 @@ watch conn = withManager \mgr -> do
     ev              -> do
       -- A small delay (10ms) to ensure the write is complete
       threadDelay 10000
-      let r = makeRelative basePath $ eventPath ev
+      let r = makeRelative (basePath </> postDir) $ eventPath ev
       if eventIsDirectory ev
         then 
           putStr [i|Indexing #{r}...|]  >> cacheDir  r conn >> putStrLn "done."
@@ -192,9 +187,9 @@ serve :: Connection -> Application
 serve conn req respond = 
   case pathInfo req of { [] -> "home"; p -> joinPath $ from <$> p }
   & \slug -> do
-      post <- query conn "SELECT * FROM posts WHERE slug = ? OR web_path = ? OR web_ext_path = ?" 
-              [slug,slug]
-      dir  <- query conn "SELECT * FROM dirs WHERE slug = ? OR web_path = ?"
+      post <- query conn "SELECT * FROM posts WHERE slug = ? OR web_path = ? OR path = ?" 
+              [slug,slug,slug]
+      dir  <- query conn "SELECT * FROM dirs WHERE slug = ? OR path = ?"
               [slug,slug]
       respond $ case (post, dir) of
         (p:_,_) -> responseHTML status200 $ from $ pContent p
@@ -239,9 +234,10 @@ cacheAllPosts conn = do
     >>= progressAll (\p->[i|Compiling #{p}...|]) (`cachePost` conn)
 
 cachePost :: FilePath -> Connection -> IO ()
-cachePost d conn = do
+cachePost dp conn = do
+  let d = makeRelative postDir dp
   convert <- ICU.toUnicode <$> (ICU.open "utf-8" Nothing)
-  h       <- openFile d ReadMode
+  h       <- openFile (postDir </> d) ReadMode
   fileRaw <- convert <$> BS.hGetContents h 
 
   case parseOnly postP fileRaw of
@@ -252,9 +248,8 @@ cachePost d conn = do
       ["-t", "html"] $ from body
 
     let 
-      webExtPath = joinPath $ tail $ splitDirectories d
-      webPath    = dropExtension webExtPath
-      dir = takeDirectory webPath
+      webPath = dropExtension d
+      dir = takeDirectory d
       title = fromMaybe (from $ takeBaseName d) $ lookup "title" headers
       desc = lookup "description" headers
 
@@ -271,13 +266,13 @@ cachePost d conn = do
     execute conn [i|DELETE FROM posts WHERE path = ? |] [d]
     slug <- makeSlug d (from <$> lookup "slug" headers) conn
     print
-      $ CachedPost d webPath webExtPath dir slug title desc content
-    execute conn [i| INSERT OR REPLACE INTO posts VALUES (?, ?, ?, ?, ?, ?, ?, ?)|] 
-      $ CachedPost d webPath webExtPath dir slug title desc content
+      $ CachedPost d webPath dir slug title desc content
+    execute conn [i| INSERT OR REPLACE INTO posts VALUES (?, ?, ?, ?, ?, ?, ?)|] 
+      $ CachedPost d webPath dir slug title desc content
 
 cacheDir :: FilePath -> Connection -> IO ()
-cacheDir d conn = do
-  let webPath = joinPath $ tail $ splitDirectories d
+cacheDir dp conn = do
+  let d = makeRelative postDir dp
 
   let 
     listDir CachedDir{..} = [i|<li class='dir'><a href='/#{dSlug}'>
@@ -289,14 +284,14 @@ cacheDir d conn = do
     </a></li>|]
 
   dirListings <- map listDir
-    <$> query conn [i|SELECT * FROM dirs  WHERE dir = ?|] [webPath] 
+    <$> query conn [i|SELECT * FROM dirs  WHERE dir = ?|] [d] 
   postListings <- map listPost
-    <$> query conn [i|SELECT * FROM posts WHERE dir = ?|] [webPath]
+    <$> query conn [i|SELECT * FROM posts WHERE dir = ?|] [d]
     
   let 
     title = from $ takeBaseName d
     listing = [i|<ul class="listing">
-      <li class='dir'><a href="/#{takeDirectory webPath}">up a level</a></li>
+      <li class='dir'><a href="/#{takeDirectory d}">up a level</a></li>
       #{T.intercalate "\n" dirListings}
       #{T.intercalate "\n" postListings}
       </ul>|]
@@ -305,8 +300,8 @@ cacheDir d conn = do
 
   execute conn [i|DELETE FROM dirs WHERE path = ?|] [d]
   slug <- makeSlug d Nothing conn
-  execute conn [i| INSERT OR REPLACE INTO dirs VALUES (?, ?, ?, ?, ?, ?)|] 
-    $ CachedDir d webPath (takeDirectory webPath) slug title dirContent
+  execute conn [i| INSERT OR REPLACE INTO dirs VALUES (?, ?, ?, ?, ?)|] 
+    $ CachedDir d (takeDirectory d) slug (from title) dirContent
 
 -- Choose a slug for a path based on whether the obvious choice is taken,
 -- and/or whether the route defines its own.
@@ -322,6 +317,7 @@ makeSlug fp customSlug conn = do
 -- Get all directories in a root.
 getDirs :: FilePath -> IO [FilePath]
 getDirs fp = do
+  basePath <- getCurrentDirectory
   fs <- map (fp </>) <$> listDirectory fp
   dirs <- filterM doesDirectoryExist fs
   (++dirs) . concat <$> traverse getDirs dirs
