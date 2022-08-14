@@ -244,6 +244,8 @@ cachePost dp conn = do
     Left err -> error err
     Right (headers, body) -> do
   
+    print (takeExtension dp)
+
     fragment <- case takeExtension dp of
       "html" -> pure body
       _      -> (from . \(a,b,c) -> b) 
