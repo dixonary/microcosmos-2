@@ -1,0 +1,42 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.34.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           microcosmos
+version:        0.0.0
+synopsis:       A very small content management system.
+description:    A very small content management system.
+category:       web
+maintainer:     Alex Dixon <alex@dixonary.co.uk>
+license:        MIT
+build-type:     Simple
+
+executable mc
+  main-is: Main.hs
+  other-modules:
+      Paths_microcosmos
+  hs-source-dirs:
+      app
+  default-extensions: DataKinds DuplicateRecordFields MultiParamTypeClasses ScopedTypeVariables TemplateHaskell TypeApplications TypeFamilies GeneralizedNewtypeDeriving LambdaCase BlockArguments TupleSections MultiWayIf OverloadedStrings QuasiQuotes RankNTypes ConstraintKinds QuantifiedConstraints FlexibleContexts RecordWildCards NondecreasingIndentation DeriveGeneric StandaloneDeriving
+  build-depends:
+      attoparsec
+    , base >=4.10 && <5
+    , directory
+    , extra
+    , file-embed
+    , filepath
+    , fsnotify
+    , http-types
+    , parser-combinators
+    , process
+    , sqlite-simple
+    , string-interpolate
+    , terminal-progress-bar
+    , text
+    , wai
+    , wai-middleware-static
+    , warp
+    , witch
+  default-language: Haskell2010

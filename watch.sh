@@ -1,0 +1,1 @@
+ghcid -c ./rebuild.sh -T ":!tmux send-keys -t0 C-c; tmux send-keys \"cabal run -v0\" Enter"

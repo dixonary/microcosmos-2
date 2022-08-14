@@ -1,0 +1,61 @@
+name: microcosmos
+synopsis: A very small content management system.
+description: A very small content management system.
+
+maintainer: Alex Dixon <alex@dixonary.co.uk>
+license: MIT
+
+verbatim:
+  cabal-version: 2.2
+
+category: web
+
+dependencies:
+- base >=4.10 && <5
+- text
+- sqlite-simple
+- string-interpolate
+- directory
+- filepath
+- fsnotify
+- wai
+- warp
+- file-embed
+- process
+- terminal-progress-bar
+- http-types
+- wai-middleware-static
+- witch
+- attoparsec
+- parser-combinators
+- extra
+
+default-extensions:
+- DataKinds
+- DuplicateRecordFields
+- MultiParamTypeClasses     
+- ScopedTypeVariables       
+- TemplateHaskell           
+- TypeApplications          
+- TypeFamilies              
+- GeneralizedNewtypeDeriving
+- LambdaCase
+- BlockArguments
+- TupleSections
+- MultiWayIf
+- OverloadedStrings
+- QuasiQuotes
+- RankNTypes
+- ConstraintKinds
+- QuantifiedConstraints
+- FlexibleContexts
+- RecordWildCards
+- NondecreasingIndentation
+- DeriveGeneric
+- StandaloneDeriving
+
+executables:
+  mc:
+    main: Main.hs
+    source-dirs: app
+    split-objs: true
