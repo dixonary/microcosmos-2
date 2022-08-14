@@ -190,7 +190,7 @@ serve :: Connection -> Application
 serve conn req respond = 
   case pathInfo req of { [] -> "home"; p -> joinPath $ from <$> p }
   & \slug -> do
-      post <- query conn "SELECT * FROM posts WHERE slug = ? OR web_path = ?" 
+      post <- query conn "SELECT * FROM posts WHERE slug = ? OR web_path = ? OR web_ext_path = ?" 
               [slug,slug]
       dir  <- query conn "SELECT * FROM dirs WHERE slug = ? OR web_path = ?"
               [slug,slug]
@@ -268,7 +268,7 @@ cachePost d conn = do
 
     execute conn [i|DELETE FROM posts WHERE path = ? |] [d]
     slug <- makeSlug d (from <$> lookup "slug" headers) conn
-    execute conn [i| INSERT INTO posts VALUES (?, ?, ?, ?, ?, ?, ?, ?)|] 
+    execute conn [i| INSERT OR REPLACE INTO posts VALUES (?, ?, ?, ?, ?, ?, ?, ?)|] 
       $ CachedPost d webPath webExtPath dir slug title desc content
 
 cacheDir :: FilePath -> Connection -> IO ()
@@ -301,7 +301,7 @@ cacheDir d conn = do
 
   execute conn [i|DELETE FROM dirs WHERE path = ?|] [d]
   slug <- makeSlug d Nothing conn
-  execute conn [i| INSERT INTO dirs VALUES (?, ?, ?, ?, ?, ?)|] 
+  execute conn [i| INSERT OR REPLACE INTO dirs VALUES (?, ?, ?, ?, ?, ?)|] 
     $ CachedDir d webPath (takeDirectory webPath) slug title dirContent
 
 -- Choose a slug for a path based on whether the obvious choice is taken,
