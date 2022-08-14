@@ -39,13 +39,14 @@ import System.Environment.Blank (getEnvDefault)
 -- DATA TYPES AND CONSTANTS 
 
 data CachedPost = CachedPost
-  { pPath     :: FilePath
-  , pWebPath  :: FilePath
-  , pDir      :: FilePath
-  , pSlug     :: FilePath
-  , pTitle    :: Text
-  , pDesc     :: Maybe Text
-  , pContent  :: Text
+  { pPath       :: FilePath
+  , pWebPath    :: FilePath
+  , pWebExtPath :: FilePath
+  , pDir        :: FilePath
+  , pSlug       :: FilePath
+  , pTitle      :: Text
+  , pDesc       :: Maybe Text
+  , pContent    :: Text
   } deriving (Generic, Show)
 instance FromRow CachedPost
 instance ToRow CachedPost
@@ -108,7 +109,8 @@ main = do
 
   -- Create indices for faster lookup on valid paths
   execute_ conn [i|CREATE UNIQUE INDEX post_slug ON posts ( slug )|]
-  execute_ conn [i|CREATE UNIQUE INDEX post_web_path ON posts ( web_path )|]
+  execute_ conn [i|CREATE INDEX post_web_path ON posts ( web_path )|]
+  execute_ conn [i|CREATE UNIQUE INDEX post_web_ext_path ON posts ( web_ext_path )|]
   execute_ conn [i|CREATE UNIQUE INDEX dir_slug ON dirs ( slug )|]
   execute_ conn [i|CREATE UNIQUE INDEX dir_web_path ON dirs ( web_path )|]
 
@@ -240,7 +242,8 @@ cachePost d conn = do
       ["-t", "html"] $ from body
 
     let 
-      webPath = joinPath $ tail $ splitDirectories $ dropExtension d
+      webExtPath = joinPath $ tail $ splitDirectories d
+      webPath    = dropExtension webExtPath
       dir = takeDirectory webPath
       title = fromMaybe (from $ takeBaseName d) $ lookup "title" headers
       desc = lookup "description" headers
@@ -257,8 +260,8 @@ cachePost d conn = do
 
     execute conn [i|DELETE FROM posts WHERE path = ? |] [d]
     slug <- makeSlug d (from <$> lookup "slug" headers) conn
-    execute conn [i| INSERT INTO posts VALUES (?, ?, ?, ?, ?, ?, ?)|] 
-      $ CachedPost d webPath dir slug title desc content
+    execute conn [i| INSERT INTO posts VALUES (?, ?, ?, ?, ?, ?, ?, ?)|] 
+      $ CachedPost d webPath dir slug webExtPath title desc content
 
 cacheDir :: FilePath -> Connection -> IO ()
 cacheDir d conn = do
