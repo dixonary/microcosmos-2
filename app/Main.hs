@@ -37,6 +37,7 @@ import System.Environment (getEnv)
 import System.Environment.Blank (getEnvDefault)
 import qualified Data.Text.ICU.Convert as ICU
 import Data.Char (isDigit)
+import Text.Read (readMaybe)
 
 -------------------------------------------------------------------------------
 -- DATA TYPES AND CONSTANTS 
@@ -83,8 +84,11 @@ main :: IO ()
 main = do
   initialise
   conn <- open ":memory:"
-  port <- getEnvDefault "" "MC_PORT" 
-    <&> \x -> if all isDigit x then read x else 3000
+
+  portEnv <- getEnvDefault "MC_PORT" ""
+  putStrLn $ "Env port is: \"" ++ portEnv ++ "\""
+  let port = fromMaybe 3000 $ readMaybe portEnv
+  putStrLn $ "Using port: " ++ show port
 
   hSetBuffering stdout NoBuffering
   
@@ -244,7 +248,7 @@ cachePost dp conn = do
     Left err -> error err
     Right (headers, body) -> do
   
-    print (takeExtension dp)
+    -- print (takeExtension dp)
 
     fragment <- case takeExtension dp of
       ".html" -> pure body
@@ -269,8 +273,8 @@ cachePost dp conn = do
 
     execute conn [i|DELETE FROM posts WHERE path = ? |] [d]
     slug <- makeSlug d (from <$> lookup "slug" headers) conn
-    print
-      $ CachedPost d webPath dir slug title desc content
+    --print
+    --  $ CachedPost d webPath dir slug title desc content
     execute conn [i| INSERT OR REPLACE INTO posts VALUES (?, ?, ?, ?, ?, ?, ?)|] 
       $ CachedPost d webPath dir slug title desc content
 
